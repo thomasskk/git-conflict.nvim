@@ -2,6 +2,7 @@ local M = {}
 
 local color = require('git-conflict.colors')
 local utils = require('git-conflict.utils')
+local picker = require('git-conflict.picker')
 
 local fn = vim.fn
 local api = vim.api
@@ -458,9 +459,12 @@ local function set_commands()
   command('GitConflictRefresh', function() fetch_conflicts() end, { nargs = 0 })
   command('GitConflictListQf', function()
     M.conflicts_to_qf_items(function(items)
+      local results = {}
       if #items > 0 then
-        fn.setqflist(items, 'r')
-        vim.cmd([[copen]])
+        for _, item in ipairs(items) do
+          table.insert(results, item.filename)
+        end
+        picker.execute({ results = results })
       end
     end)
   end, { nargs = 0 })
