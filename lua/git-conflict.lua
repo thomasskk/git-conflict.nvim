@@ -154,13 +154,18 @@ end
 ---@param dir string?
 ---@param callback fun(files: table<string, integer[]>, string)
 local function get_conflicted_files(dir, callback)
-  local cmd = fmt('git -C "%s" diff --line-prefix=%s%s --name-only --diff-filter=U', dir, dir, sep)
-  job(cmd, function(data)
-    local files = {}
-    for _, filename in ipairs(data) do
-      if #filename > 0 then files[filename] = files[filename] or {} end
-    end
-    callback(files, dir)
+  get_git_root(dir, function(root)
+    local cmd = fmt("git -C '%s' status -s | grep ^U | awk '{print $2}'", root)
+    job(cmd, function(data)
+      local files = {}
+      for _, filename in ipairs(data) do
+        if #filename > 0 then
+          local full_path = root .. sep .. filename
+          files[full_path] = files[full_path] or {}
+        end
+      end
+      callback(files, dir)
+    end)
   end)
 end
 
@@ -615,7 +620,7 @@ function M.setup(user_config)
   api.nvim_set_decoration_provider(NAMESPACE, {
     on_buf = function(_, bufnr, _) return utils.is_valid_buf(bufnr) end,
     on_win = function(_, _, bufnr, _, _)
-      if visited_buffers[bufnr] then process(bufnr) end
+      if visited_buffers[vim.api.nvim_buf_get_name(bufnr)] then process(bufnr) end
     end,
   })
 end
